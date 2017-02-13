@@ -1,5 +1,5 @@
 /**
-* A class to load niftii files and provide slices as png textures.
+* A class to handle niftii files and provide slices for web visualisation
 *
 * @version 0.1
 * @author Ralph Schurade <schurade@gmx.de>
@@ -13,10 +13,9 @@
 		var data = [];
 		var hdr = {};
 		var dim1 = 0, dim2=0, dim3=0;
-		var max = -1000;
-		var min = 1000;
+		var max = -100000;
+		var min = 100000;
 		var zero = 0;
-		var type = '';
 		var loaded = false;
 
 		var texSize = 128;
@@ -91,23 +90,17 @@
 				dim3 = Math.min( 255, hdr.dim[3] );
 				
 				if ( hdr.datatype === 2 ) {
-					for ( var i = 88; i < data.byteLength; ++i ) {
+					for ( var i = 348; i < data.byteLength; ++i ) {
 						if ( data.getUint8( i ) < min ) min = data.getUint8( i );
 						if ( data.getUint8( i ) > max ) max = data.getUint8( i );
 					}
 					console.log( "min: " + min + " max: " + max );
 					//min = 0;
 					//max = 255;
-					if (hdr.dim[4] === 1 ) {
-						type = 'anatomy';
-					}
-					if (hdr.dim[4] === 3) {
-						type = 'rgb';
-					}
 				}
 
 				if ( hdr.datatype === 16 ) {
-					for ( var i = 88; i < data.byteLength; i+=4 ) {
+					for ( var i = 348; i < data.byteLength; i+=4 ) {
 						if ( data.getFloat32( i ) < min ) min = data.getFloat32( i );
 						if ( data.getFloat32( i ) > max ) max = data.getFloat32( i );
 					}
@@ -115,14 +108,8 @@
 					
 					var div = max - min;
 					zero = ( 0 - min ) / div;
-					for ( var j = 88; j < data.length; j+=4 ) {
+					for ( var j = 348; j < data.length; j+=4 ) {
 						data.setFloat32(j, ( data.getFloat32(j) - min ) / div );
-					}
-					if ( min < 0 ) {
-						type = 'fmri';
-					}
-					else {
-						type = 'overlay';
 					}
 				}
 				
@@ -366,10 +353,6 @@
 		
 		this.getDims = function() {
 			return { "nx" : hdr.dim[1], "ny" : hdr.dim[2], "nz" : hdr.dim[3], "dx" : hdr.pixdim[1], "dy" : hdr.pixdim[2], "dz" : hdr.pixdim[3] }; 
-		};
-		
-		this.getType = function() {
-			return type;
 		};
 	};
 })();
