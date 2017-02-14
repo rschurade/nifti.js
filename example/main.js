@@ -83,6 +83,17 @@ function saveFile()
 	}
 }
 
+function invert() 
+{
+	var dims = nifti.getDims();
+	for( var z = 0; z < dims.nz; ++z )
+		for( var y = 0; y < dims.ny; ++y )
+			for( var x = 0; x < dims.nx; ++x ) {
+				var val = nifti.getValue( x, y, z );
+				nifti.setValue( x, y, z, 255 - val );
+			}
+}
+
 var nifti;
 var nifti2;
 
@@ -97,4 +108,5 @@ $(document).ready(function(){
 	document.getElementById('buttonDownload').addEventListener('click', downloadFile, false);
 	document.getElementById('buttonSave').addEventListener('click', saveFile, false);
 	document.getElementById('file-input').addEventListener('change', loadFileFromDisk, false);
+	document.getElementById('buttonInvert').addEventListener('click', invert, false);
 });
