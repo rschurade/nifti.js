@@ -11,6 +11,7 @@
 (function() {
 	window.Nifti = function () {
 		var data = [];
+		var rawData;
 		var hdr = {};
 		var dimX = 0, dimY=0, dimZ=0;
 		var max = -100000;
@@ -26,6 +27,7 @@
 			xhr.responseType = 'arraybuffer';
 
 			xhr.onload = function(e) {
+				rawData = this.response;
 				data = new DataView(this.response); // this.response == uInt8Array.buffer
 				parseHeader();
 				calcMinMax();				
@@ -39,6 +41,7 @@
 		this.loadFile = function( file, callback ) {
 			var reader = new FileReader();
 			reader.onload = function(e) {
+				rawData = e.target.result;
 				data = new DataView( e.target.result );
 				parseHeader();
 				calcMinMax();				
@@ -359,6 +362,10 @@
 			}
 			
 			return imageData;
+		}
+		
+		this.getRawData = function() {
+			return rawData;
 		}
 		
 		this.getMin = function() {

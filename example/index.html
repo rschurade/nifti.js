@@ -5,7 +5,8 @@
         <title>Example load nifti</title>
         <link rel="stylesheet" type="text/css" href="main.css" />
         <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>	
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+        <script src="FileSaver.js"></script>	
 		<script src="../nifti.js"></script>
 		<script src="main.js"></script>
     </head>
@@ -18,5 +19,12 @@
 		<br>
 		<input type="file" id="file-input" />
 		<canvas id="c2"></canvas>
+		<br><br><br><br>
+		<div class="form-group">
+		    <label for="input-fileName">File name</label>
+		    <input type="text" class="form-control" id="input-fileName" value="nifti.nii" placeholder="Enter file name">
+		    <input type="button" id="buttonSave" value="Save File" />
+  		</div>
+		
 	</body>
 </html>	

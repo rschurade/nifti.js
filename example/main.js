@@ -71,9 +71,18 @@ function loadFileFromDisk(e)
 	
 	nifti2 = new Nifti();
 	nifti2.loadFile( file, fileLoadCallback );
-	
-	
 }
+
+function saveFile()
+{
+	if ( nifti ) {
+		var filename = $("#input-fileName").val()
+		var arrayBuffer = nifti.getRawData();
+		var blob = new Blob([arrayBuffer], {type: 'application/octet-binary'} );
+		saveAs( blob, filename );
+	}
+}
+
 var nifti;
 var nifti2;
 
@@ -86,6 +95,7 @@ function downloadFile()
 
 $(document).ready(function(){
 	document.getElementById('buttonDownload').addEventListener('click', downloadFile, false);
+	document.getElementById('buttonSave').addEventListener('click', saveFile, false);
 	document.getElementById('file-input').addEventListener('change', loadFileFromDisk, false);
 });
 
