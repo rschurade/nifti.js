@@ -6,6 +6,9 @@ function fileLoadCallback() {
 	var canvas = document.getElementById( "c2" );
 
 	var dims = nifti2.getDims();
+	canvas.width = dims.nx;
+	canvas.height = dims.nz;
+	
 	var ctx = canvas.getContext("2d");
 	var imageData = ctx.getImageData( 0, 0, dims.nx, dims.nz );
 	
@@ -28,8 +31,8 @@ function scrollThrough()
 
 	var dims = nifti.getDims();
 
-	//canvas.width = dims.nx;
-	//canvas.height = dims.nz;
+	canvas.width = dims.nx;
+	canvas.height = dims.nz;
 	var ctx = canvas.getContext("2d");
 	var imageData = ctx.getImageData( 0, 0, dims.nx, dims.nz );
 	
@@ -43,13 +46,12 @@ function scrollThrough()
 	
 	ctx.putImageData( imageData, 0,0 );
 	
-	var url = canvas.toDataURL();
-
 	/*
+	var url = canvas.toDataURL();
     var newImg = document.getElementById( "img1" );
     newImg.src = url;
 	newImg.height = dims.nx * 3;
-*/
+	 */
 	
 	if ( counter >= dims.ny )
 	{

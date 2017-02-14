@@ -235,7 +235,7 @@
 		}
 		
 		function getIdFloat(x,y,z) {
-			return 88 + x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]);
+			return 352 + x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]);
 		}
 		
 		function getImageRGBByte(orient, pos) {
