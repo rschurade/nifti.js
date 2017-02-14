@@ -45,13 +45,11 @@ function scrollThrough()
 	
 	var url = canvas.toDataURL();
 
+	/*
     var newImg = document.getElementById( "img1" );
-	
     newImg.src = url;
-	
 	newImg.height = dims.nx * 3;
-
-
+*/
 	
 	if ( counter >= dims.ny )
 	{
@@ -98,8 +96,3 @@ $(document).ready(function(){
 	document.getElementById('buttonSave').addEventListener('click', saveFile, false);
 	document.getElementById('file-input').addEventListener('change', loadFileFromDisk, false);
 });
-
-
-
-
-

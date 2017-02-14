@@ -12,19 +12,21 @@
     </head>
 
     <body>
-    	<input type="button" id="buttonDownload" value="Download File" />
-    	<br>
-		<canvas id="c1"></canvas>
-		<img id="img1"></img>
+    	<div id="div1">
+	    	<input type="button" id="buttonDownload" value="Download File" />
+	    	<br>
+			<canvas id="c1"></canvas>
+			<div class="form-group">
+			    <label for="input-fileName">File name</label>
+			    <input type="text" class="form-control" id="input-fileName" value="nifti.nii" placeholder="Enter file name">
+			    <input type="button" id="buttonSave" value="Save File" />
+  			</div>
+		</div>
+		<div id="div2">
 		<br>
-		<input type="file" id="file-input" />
-		<canvas id="c2"></canvas>
-		<br><br><br><br>
-		<div class="form-group">
-		    <label for="input-fileName">File name</label>
-		    <input type="text" class="form-control" id="input-fileName" value="nifti.nii" placeholder="Enter file name">
-		    <input type="button" id="buttonSave" value="Save File" />
-  		</div>
-		
+			<input type="file" id="file-input" />
+			<br>
+			<canvas id="c2"></canvas>
+		</div>
 	</body>
 </html>	
