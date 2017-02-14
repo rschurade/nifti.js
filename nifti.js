@@ -238,6 +238,25 @@
 			return 352 + x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]);
 		}
 		
+		this.getValue = function( x, y, z ) {
+			switch( hdr.datatype ) {
+			case 2:
+				return data.getUint8( getId( x,y,z ) );
+			default:
+				console.log( "getValue(): datatype not defined" );
+			}
+		}
+		
+		this.setValue = function( x, y, z, value ) {
+			switch( hdr.datatype ) {
+			case 2:
+				data.setUint8( getId( x, y , z ), value );
+			default:
+				console.log( "getValue(): datatype not defined" );
+			}
+			
+		}
+				
 		function getImageRGBByte(orient, pos) {
 			var c2d = document.createElement("canvas");
 			c2d.width = texSize;
@@ -380,6 +399,6 @@
 			return { "nx" : hdr.dim[1], "ny" : hdr.dim[2], "nz" : hdr.dim[3], "dx" : hdr.pixdim[1], "dy" : hdr.pixdim[2], "dz" : hdr.pixdim[3] }; 
 		};
 		
-		return
+		
 	};
 })();
