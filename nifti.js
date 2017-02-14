@@ -18,8 +18,6 @@
 		var min = 100000;
 		var zero = 0;
 		var loaded = false;
-
-		var texSize = 128;
 				
 		this.download = function(url, callback) {
 			var xhr = new XMLHttpRequest();
@@ -115,7 +113,8 @@
 		}
 		
 		function calcMinMax() {
-			if ( hdr.datatype === 2 ) {
+			switch( hdr.datatype ) {
+			case 2: {
 				for ( var i = 348; i < data.byteLength; ++i ) {
 					if ( data.getUint8( i ) < min ) min = data.getUint8( i );
 					if ( data.getUint8( i ) > max ) max = data.getUint8( i );
@@ -124,8 +123,8 @@
 				//min = 0;
 				//max = 255;
 			}
-
-			if ( hdr.datatype === 16 ) {
+			break;
+			case 16: {
 				for ( var i = 348; i < data.byteLength; i+=4 ) {
 					if ( data.getFloat32( i ) < min ) min = data.getFloat32( i );
 					if ( data.getFloat32( i ) > max ) max = data.getFloat32( i );
@@ -137,6 +136,10 @@
 				for ( var j = 348; j < data.length; j+=4 ) {
 					data.setFloat32(j, ( data.getFloat32(j) - min ) / div );
 				}
+			}
+			break;
+			default:
+				console.log( "Nifti calcMinMax(): datatyper not defined" );
 			}
 		}
 		
@@ -167,67 +170,50 @@
 		
 		function getImageGrayByte(orient, pos) {
 			var c2d = document.createElement("canvas");
-			
-			
+
+			( orient === "sagittal" ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
+			( orient === "axial" ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
+			var ctx = c2d.getContext("2d");
+			var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 			
 			if ( orient === "axial" ) {
-				c2d.width = hdr.dim[1];
-				c2d.height = hdr.dim[2];
-				var ctx = c2d.getContext("2d");
-				var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 				for( var x = 0; x < dimX; ++x )
-		        {
 		            for( var y = 0; y < dimY; ++y )
 		            {
 		            	var col = data.getUint8( getId(x,y,pos) );
 		            	var index = 4 * (y * imageData.width + x);
-		                imageData.data[index] = col;
-		                imageData.data[index+1] = col;
-		                imageData.data[index+2] = col;
-		                imageData.data[index+3] = ( col > 0 ) ? 255 : 0;
+		            	setImgData( index, col );
 		            }
-		        }
 			}
 			
 			if ( orient === "coronal" ) {
-				c2d.width = hdr.dim[1];
-				c2d.height = hdr.dim[3];
-				var ctx = c2d.getContext("2d");
-				var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 				for( var x = 0; x < dimX; ++x )
-		        {
 		            for( var z = 0; z < dimZ; ++z )
 		            {
 		            	var col = data.getUint8( getId(x,pos,(dimZ-1)-z) );
 		            	var index = 4 * (z * imageData.width + x);
-		            	imageData.data[index] = col;
-		                imageData.data[index+1] = col;
-		                imageData.data[index+2] = col;
-		                imageData.data[index+3] = ( col > 0 ) ? 255 : 0;
+		            	setImgData( index, col );
 		            }
-		        }
 			}
 			
 			if ( orient === "sagittal" ) {
-				c2d.width = hdr.dim[2];
-				c2d.height = hdr.dim[3];
-				var ctx = c2d.getContext("2d");
-				var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 				for( var y = 0; y < dimY; ++y )
-		        {
 		            for( var z = 0; z < dimZ; ++z )
 		            {
 		            	var col = data.getUint8( getId(pos,y,z) );
 		            	var index = 4 * (z * imageData.width + y);
-		            	imageData.data[index] = col;
-		                imageData.data[index+1] = col;
-		                imageData.data[index+2] = col;
-		                imageData.data[index+3] = ( col > 0 ) ? 255 : 0;
+		            	setImgData( index, col );
 		            }
-		        }
 			}
 			ctx.putImageData( imageData, 0, 0 );
 			return imageData;
+			
+			function setImgData( id, col ) {
+				imageData.data[id] = col;
+                imageData.data[id+1] = col;
+                imageData.data[id+2] = col;
+                imageData.data[id+3] = ( col > 0 ) ? 255 : 0;
+			}
 		} 
 		
 		function getId(x,y,z) {
@@ -243,7 +229,7 @@
 			case 2:
 				return data.getUint8( getId( x,y,z ) );
 			default:
-				console.log( "getValue(): datatype not defined" );
+				console.log( "Nifti getValue(): datatype not defined" );
 			}
 		}
 		
@@ -251,16 +237,17 @@
 			switch( hdr.datatype ) {
 			case 2:
 				data.setUint8( getId( x, y , z ), value );
+				break;
 			default:
-				console.log( "getValue(): datatype not defined" );
+				console.log( "Nifti setValue(): datatype not defined" );
 			}
 			
 		}
 				
 		function getImageRGBByte(orient, pos) {
 			var c2d = document.createElement("canvas");
-			c2d.width = texSize;
-			c2d.height = texSize;
+			( orient === "sagittal" ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
+			( orient === "axial" ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
 			var ctx = c2d.getContext("2d");
 			var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 			
@@ -269,118 +256,96 @@
 			
 			if ( orient === "axial" ) {
 				for( var x = 0; x < dimX; ++x )
-		        {
 		            for( var y = 0; y < dimY; ++y )
 		            {
 		            	var r = data.getUint8( getId(x,y,pos) );
 		            	var g = data.getUint8(parseInt(getId(x,y,pos))+parseInt(gOff) );
 		            	var b = data.getUint8(parseInt(getId(x,y,pos))+parseInt(bOff) );
 		            	var index = 4 * (y * imageData.width + x);
-		            	imageData.data[index] = r;
-		                imageData.data[index+1] = g;
-		                imageData.data[index+2] = b;
-		                imageData.data[index+3] = 255;
+		            	setImgData( index, r, g, b );
 		            }
-		        }
 			}
 			
 			if ( orient === "coronal" ) {
 				for( var x = 0; x < dimX; ++x )
-		        {
 		            for( var z = 0; z < dimZ; ++z )
 		            {
 		                var r = data.getUint8( getId(x,pos,z) );
 		            	var g = data.getUint8( getId(x,pos,z)+gOff );
 		            	var b = data.getUint8( getId(x,pos,z)+bOff );
 		            	var index = 4 * (z * imageData.width + x);
-		            	imageData.data[index] = r;
-		                imageData.data[index+1] = g;
-		                imageData.data[index+2] = b;
-		                imageData.data[index+3] = 255;
+		            	setImgData( index, r, g, b );
 		            }
-		        }
 			}
 			
 			if ( orient === "sagittal" ) {
 				for( var y = 0; y < dimY; ++y )
-		        {
 		            for( var z = 0; z < dimZ; ++z )
 		            {
 		                var r = data.getUint8( getId(pos-1+1,y,z) );
 		            	var g = data.getUint8( getId(pos-1+1,y,z)+gOff );
 		            	var b = data.getUint8( getId(pos-1+1,y,z)+bOff );
 		            	var index = 4 * (z * imageData.width + y);
-		            	imageData.data[index] = r;
-		                imageData.data[index+1] = g;
-		                imageData.data[index+2] = b;
-		                imageData.data[index+3] = 255;
+		            	setImgData( index, r, g, b );
 		            }
-		        }
 			}
 			
 			return imageData;
+			
+			function setImgData( id, r, g, b ) {
+				imageData.data[id] = r;
+                imageData.data[id+1] = g;
+                imageData.data[id+2] = b;
+                imageData.data[id+3] = 255;
+			}
 		}
 		
 		function getImageGrayFloat(orient, pos) {
 			var c2d = document.createElement("canvas");
-			c2d.width = texSize;
-			c2d.height = texSize;
+
+			( orient === "sagittal" ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
+			( orient === "axial" ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
 			var ctx = c2d.getContext("2d");
 			var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 			
-			for ( var i = 0; i < 256*256; ++i ) {
-				imageData.data[i*4] = zero*255;
-                imageData.data[i*4+1] = zero*255;
-                imageData.data[i*4+2] = zero * 255;
-                imageData.data[i*4+3] = 255;
-			}
-			
 			if ( orient === "axial" ) {
 				for( var x = 0; x < dimX; ++x )
-		        {
 		            for( var y = 0; y < dimY; ++y )
 		            {
 		            	var col = data.getFloat32( getIdFloat(x,y,pos) );
 		            	var index = 4 * (y * imageData.width + x);
-		                imageData.data[index] = col * 255;
-		                imageData.data[index+1] = col * 255;
-		                imageData.data[index+2] = col * 255;
-		                imageData.data[index+3] = 255;
+		            	setImgData( index, col );
 		            }
-		        }
 			}
 			
 			if ( orient === "coronal" ) {
 				for( var x = 0; x < dimX; ++x )
-		        {
 		            for( var z = 0; z < dimZ; ++z )
 		            {
 		            	var col = data.getFloat32( getIdFloat(x,pos,z) );
 		            	var index = 4 * (z * imageData.width + x);
-		            	imageData.data[index] = col * 255;
-		                imageData.data[index+1] = col * 255;
-		                imageData.data[index+2] = col * 255;
-		                imageData.data[index+3] = 255;
+		            	setImgData( index, col );
 		            }
-		        }
 			}
 			
 			if ( orient === "sagittal" ) {
 				for( var y = 0; y < dimY; ++y )
-		        {
 		            for( var z = 0; z < dimZ; ++z )
 		            {
 		            	var col = data.getFloat32( getIdFloat(pos-1+1,y,z) );
 		            	var index = 4 * (z * imageData.width + y);
-		            	imageData.data[index] = col * 255;
-		                imageData.data[index+1] = col * 255;
-		                imageData.data[index+2] = col * 255;
-		                imageData.data[index+3] = 255;
+		            	setImgData( index, col );
 		            }
-		        }
 			}
 			
 			return imageData;
+			
+			function setImgData( id, col ) {
+				imageData.data[id] = col*255;
+                imageData.data[id+1] = col*255;
+                imageData.data[id+2] = col*255;
+                imageData.data[id+3] = 255;
+			}
 		}
 		
 		this.getRawData = function() {
@@ -398,7 +363,5 @@
 		this.getDims = function() {
 			return { "nx" : hdr.dim[1], "ny" : hdr.dim[2], "nz" : hdr.dim[3], "dx" : hdr.pixdim[1], "dy" : hdr.pixdim[2], "dz" : hdr.pixdim[3] }; 
 		};
-		
-		
 	};
 })();
