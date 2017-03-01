@@ -50,6 +50,67 @@
 			reader.readAsArrayBuffer(file);
 		}
 		
+		this.makeNew = function( nx, ny, nz, dx, dy, dz, nt, datatype ) {
+			var size = 352 + ( nx * ny * nz * nt * sizeOf( datatype ) );
+			/*create byteArray*/
+			rawData = new Uint8Array( size );
+			data = new DataView( rawData.buffer );
+			data.setInt32( 0, 348, true );	
+			data.setUint8( 39, 1 ); //toDo: realValue? 1 just like that
+			data.setInt16( 40, 5, true );
+			data.setInt16( 42, nx, true );
+			data.setInt16( 44, ny, true );
+			data.setInt16( 46, nz, true );
+			data.setInt16( 48, 1, true );
+			data.setInt16( 50, nt, true );
+			/* missing! fill in!! fslhd ? eigenvector dataset */
+			data.setInt16( 70, datatypeCode( datatype ), true );
+			/* bitpix... ( 72, */
+			data.setFloat32( 80, dx, true );
+			data.setFloat32( 84, dy, true );
+			data.setFloat32( 88, dz, true );
+			/* plus 5 more... float, should be 0 */
+			parseHeader();
+		}	
+		
+		function sizeOf( datatype ) {
+			switch( datatype ) {
+			case "UINT8": 
+				return 1;
+				break;
+			case "INT16":
+				return 2;
+				break;
+			case "INT32":
+				return 4;
+				break;
+			case "FLOAT32":
+				return 4;
+				break;
+			default:
+				return -1;
+			}
+		}
+		
+		function datatypeCode( datatype ) {
+			switch( datatype ) {
+			case "UINT8": 
+				return 2;
+				break;
+			case "INT16":
+				return 4;
+				break;
+			case "INT32":
+				return 8;
+				break;
+			case "FLOAT32":
+				return 16;
+				break;
+			default:
+				return -1;
+			}
+		}
+		
 		
 		function parseHeader() {
 			hdr.sizeof_hdr = data.getInt32( 0, true ); // 0
@@ -112,6 +173,7 @@
 			dimZ = hdr.dim[3];
 		}
 		
+	
 		function calcMinMax() {
 			switch( hdr.datatype ) {
 			case 2: {
@@ -139,7 +201,7 @@
 			}
 			break;
 			default:
-				console.log( "Nifti calcMinMax(): datatyper not defined" );
+				console.log( "Nifti calcMinMax(): datatype " + hdr.datatype + " not defined" );
 			}
 		}
 		
@@ -180,7 +242,7 @@
 				for( var x = 0; x < dimX; ++x )
 		            for( var y = 0; y < dimY; ++y )
 		            {
-		            	var col = data.getUint8( getId(x,y,pos) );
+		            	var col = data.getUint8( getId(x,(dimY-1)-y,pos) );
 		            	var index = 4 * (y * imageData.width + x);
 		            	setImgData( index, col );
 		            }
@@ -200,7 +262,7 @@
 				for( var y = 0; y < dimY; ++y )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		            	var col = data.getUint8( getId(pos,y,z) );
+		            	var col = data.getUint8( getId(parseInt(pos),y,(dimZ-1)-z) );
 		            	var index = 4 * (z * imageData.width + y);
 		            	setImgData( index, col );
 		            }
@@ -216,18 +278,34 @@
 			}
 		} 
 		
-		function getId(x,y,z) {
+		function getId( x,y,z ) {
 			return 352 + x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]);
 		}
 		
-		function getIdFloat(x,y,z) {
-			return 352 + x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]);
+		function getIdFloat( x,y,z ) {
+			return 352 + ( x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]) ) * 4;
 		}
+		
 		
 		this.getValue = function( x, y, z ) {
 			switch( hdr.datatype ) {
+				//UINT8
 			case 2:
 				return data.getUint8( getId( x,y,z ) );
+				//FLOAT32
+			case 16:
+				if( hdr.dim[5] == 1 ) {
+					return data.getFloat32( getIdFloat( x, y, z ), true );	
+				}
+				if( hdr.dim[5] == 3 ) {
+					var out = [];
+					var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
+					out[0] = data.getFloat32( getIdFloat3D( x, y, z ), true );
+					out[1] = data.getFloat32( getIdFloat3D( x, y, z ) + blocksize, true );
+					out[2] = data.getFloat32( getIdFloat3D( x, y, z ) + blocksize*2, true );	
+					return out;
+				}
+				break;
 			default:
 				console.log( "Nifti getValue(): datatype not defined" );
 			}
@@ -237,6 +315,16 @@
 			switch( hdr.datatype ) {
 			case 2:
 				data.setUint8( getId( x, y , z ), value );
+				break;
+			case 16:
+				if( hdr.dim[5] == 1 ) {
+					data.setFloat32( getIdFloat( x, y, z ), value, true );	
+				}
+				if( hdr.dim[5] == 3 ) {
+					data.setFloat32( getIdFloat( x, y, z ), value[0], true );
+					data.setFloat32( getIdFloat( x, y, z ) + 4, value[1], true );
+					data.setFloat32( getIdFloat( x, y, z ) + 8 , value[2], true );	
+				}
 				break;
 			default:
 				console.log( "Nifti setValue(): datatype not defined" );
