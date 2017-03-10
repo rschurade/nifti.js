@@ -287,25 +287,38 @@
 		}
 		
 		
-		this.getValue = function( x, y, z ) {
+		this.getValueId = function( id ) {
 			switch( hdr.datatype ) {
 				//UINT8
-			case 2:
-				return data.getUint8( getId( x,y,z ) );
+				case 2:
+					return data.getUint8( id );
 				//FLOAT32
-			case 16:
-				if( hdr.dim[5] == 1 ) {
-					return data.getFloat32( getIdFloat( x, y, z ), true );	
-				}
-				if( hdr.dim[5] == 3 ) {
-					var out = [];
-					var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
-					out[0] = data.getFloat32( getIdFloat3D( x, y, z ), true );
-					out[1] = data.getFloat32( getIdFloat3D( x, y, z ) + blocksize, true );
-					out[2] = data.getFloat32( getIdFloat3D( x, y, z ) + blocksize*2, true );	
-					return out;
-				}
+				case 16:
+					if( hdr.dim[5] == 1 ) {
+						return data.getFloat32( id, true );	
+					}
+					if( hdr.dim[5] == 3 ) {
+						var out = [];
+						var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
+						out[0] = data.getFloat32( id, true );
+						out[1] = data.getFloat32( id + blocksize, true );
+						out[2] = data.getFloat32( id + blocksize*2, true );	
+						return out;
+					}
 				break;
+				default:
+					console.log( "Nifti getValue(): datatype not defined" );
+			}
+		}
+		
+		this.getValue = function( x, y, z ) {
+			switch( hdr.datatype ) {
+			//UINT8
+			case 2:
+				return getValueId( getId( x,y,z ) );
+			//FLOAT32
+			case 16:
+				return getValueId( getIdFloat( x, y, z ) );	
 			default:
 				console.log( "Nifti getValue(): datatype not defined" );
 			}
@@ -321,9 +334,10 @@
 					data.setFloat32( getIdFloat( x, y, z ), value, true );	
 				}
 				if( hdr.dim[5] == 3 ) {
+					var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
 					data.setFloat32( getIdFloat( x, y, z ), value[0], true );
-					data.setFloat32( getIdFloat( x, y, z ) + 4, value[1], true );
-					data.setFloat32( getIdFloat( x, y, z ) + 8 , value[2], true );	
+					data.setFloat32( getIdFloat( x, y, z ) + blocksize, value[1], true );
+					data.setFloat32( getIdFloat( x, y, z ) + blocksize*2, value[2], true );	
 				}
 				break;
 			default:
