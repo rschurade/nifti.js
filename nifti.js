@@ -334,9 +334,10 @@
 					data.setFloat32( getIdFloat( x, y, z ), value, true );	
 				}
 				if( hdr.dim[5] == 3 ) {
+					var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
 					data.setFloat32( getIdFloat( x, y, z ), value[0], true );
-					data.setFloat32( getIdFloat( x, y, z ) + 4, value[1], true );
-					data.setFloat32( getIdFloat( x, y, z ) + 8 , value[2], true );	
+					data.setFloat32( getIdFloat( x, y, z ) + blocksize, value[1], true );
+					data.setFloat32( getIdFloat( x, y, z ) + blocksize*2, value[2], true );	
 				}
 				break;
 			default:
