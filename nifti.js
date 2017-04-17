@@ -1,8 +1,7 @@
 /**
-* A class to handle niftii files and provide slices for web visualisation
+* A class to handle nifti files and provide slices for web visualisation
 *
-* @version 0.1
-* @author Ralph Schurade <schurade@gmx.de>
+* @adapted from Ralph Schurade, 2017-03 katjaq
 * @copyright Copyright (c) 2011, Ralph Schurade
 * @link 
 * @license MIT License
@@ -26,7 +25,7 @@
 
 			xhr.onload = function(e) {
 				rawData = this.response;
-				data = new DataView(this.response); // this.response == uInt8Array.buffer
+				data = new DataView( rawData ); // this.response == uInt8Array.buffer
 				parseHeader();
 				calcMinMax();				
 				
@@ -50,6 +49,12 @@
 			reader.readAsArrayBuffer(file);
 		}
 		
+		/*dx delta in x pro voxel*/ 
+		/*create header (348, and related to dataype and dimensions create data block*/
+		/* 4 byte dazwischen platz --> bei 352 geht daten block los */ 
+		/* groesse datablock dimension 1 * 2 * 3 , groesse data * nt, in jedem voxel stehen drei floats, for x y z   */
+		/* nx*ny*nz*nt*sizeOfDatatype*/
+		
 		this.makeNew = function( nx, ny, nz, dx, dy, dz, nt, datatype ) {
 			var size = 352 + ( nx * ny * nz * nt * sizeOf( datatype ) );
 			/*create byteArray*/
@@ -61,9 +66,10 @@
 			data.setInt16( 42, nx, true );
 			data.setInt16( 44, ny, true );
 			data.setInt16( 46, nz, true );
-			data.setInt16( 48, 1, true );
+			data.setInt16( 48, nt, true );
 			data.setInt16( 50, nt, true );
 			/* missing! fill in!! fslhd ? eigenvector dataset */
+			data.setInt16( 68, 1007, true );
 			data.setInt16( 70, datatypeCode( datatype ), true );
 			/* bitpix... ( 72, */
 			data.setFloat32( 80, dx, true );
@@ -71,20 +77,20 @@
 			data.setFloat32( 88, dz, true );
 			/* plus 5 more... float, should be 0 */
 			parseHeader();
-		}	
+		}		
 		
 		function sizeOf( datatype ) {
 			switch( datatype ) {
-			case "UINT8": 
+			case 'UINT8': 
 				return 1;
 				break;
-			case "INT16":
+			case 'INT16':
 				return 2;
 				break;
-			case "INT32":
+			case 'INT32':
 				return 4;
 				break;
-			case "FLOAT32":
+			case 'FLOAT32':
 				return 4;
 				break;
 			default:
@@ -94,22 +100,23 @@
 		
 		function datatypeCode( datatype ) {
 			switch( datatype ) {
-			case "UINT8": 
+			case 'UINT8': 
 				return 2;
 				break;
-			case "INT16":
+			case 'INT16':
 				return 4;
 				break;
-			case "INT32":
+			case 'INT32':
 				return 8;
 				break;
-			case "FLOAT32":
+			case 'FLOAT32':
 				return 16;
 				break;
 			default:
 				return -1;
 			}
 		}
+		
 		
 		
 		function parseHeader() {
@@ -173,7 +180,7 @@
 			dimZ = hdr.dim[3];
 		}
 		
-	
+			
 		function calcMinMax() {
 			switch( hdr.datatype ) {
 			case 2: {
@@ -181,27 +188,27 @@
 					if ( data.getUint8( i ) < min ) min = data.getUint8( i );
 					if ( data.getUint8( i ) > max ) max = data.getUint8( i );
 				}
-				console.log( "min: " + min + " max: " + max );
+				console.log( 'min: ' + min + ' max: ' + max );
 				//min = 0;
 				//max = 255;
 			}
 			break;
 			case 16: {
 				for ( var i = 348; i < data.byteLength; i+=4 ) {
-					if ( data.getFloat32( i ) < min ) min = data.getFloat32( i );
-					if ( data.getFloat32( i ) > max ) max = data.getFloat32( i );
+					if ( data.getFloat32( i, true ) < min ) min = data.getFloat32( i, true );
+					if ( data.getFloat32( i, true ) > max ) max = data.getFloat32( i, true );
 				}
-				//console.log( "min: " + min + " max: " + max );
+				console.log( 'min: ' + min + ' max: ' + max );
 				
 				var div = max - min;
 				zero = ( 0 - min ) / div;
 				for ( var j = 348; j < data.length; j+=4 ) {
-					data.setFloat32(j, ( data.getFloat32(j) - min ) / div );
+					data.setFloat32( j, ( data.getFloat32( j, true ) - min ) / parseFloat( div ), true );
 				}
 			}
 			break;
 			default:
-				console.log( "Nifti calcMinMax(): datatype " + hdr.datatype + " not defined" );
+				console.log( 'Nifti calcMinMax(): datatype ' + hdr.datatype + ' not defined' );
 			}
 		}
 		
@@ -210,59 +217,59 @@
 		}
 		
 		this.getImage = function (orient, pos) {
-			if ( !loaded ) console.log( "DEBUG nifti file not finished loading");
+			if ( !loaded ) console.log( 'DEBUG nifti file not finished loading');
 			if ( orient === 'sagittal' && pos > hdr.dim[1] ) pos = 0;
 			if ( orient === 'coronal' && pos > hdr.dim[2] ) pos = 0;
 			if ( orient === 'axial' && pos > hdr.dim[3] ) pos = 0;
 			
 			if ( hdr.datatype === 2 ) {
 				if (hdr.dim[4] === 1 ) {
-					return getImageGrayByte(orient,pos);
+					return this.getImageGrayByte(orient,pos);
 				}
 				if (hdr.dim[4] === 3) {
-					return getImageRGBByte(orient,pos);
+					return this.getImageRGBByte(orient,pos);
 				}
 			}
 			else if ( hdr.datatype === 16 ) {
 				if (hdr.dim[4] === 1 ) {
-					return getImageGrayFloat(orient,pos);
+					return this.getImageGrayFloat(orient,pos);
 				}
 			}
 		};
 		
-		function getImageGrayByte(orient, pos) {
-			var c2d = document.createElement("canvas");
+		this.getImageGrayByte = function(orient, pos) {
+			var c2d = document.createElement('canvas');
 
-			( orient === "sagittal" ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
-			( orient === "axial" ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
-			var ctx = c2d.getContext("2d");
+			( orient === 'sagittal' ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
+			( orient === 'axial' ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
+			var ctx = c2d.getContext('2d');
 			var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 			
-			if ( orient === "axial" ) {
+			if ( orient === 'axial' ) {
 				for( var x = 0; x < dimX; ++x )
 		            for( var y = 0; y < dimY; ++y )
 		            {
-		            	var col = data.getUint8( getId(x,(dimY-1)-y,pos) );
+		            	var col = data.getUint8( this.getId(x,(dimY-1)-y,pos) );
 		            	var index = 4 * (y * imageData.width + x);
 		            	setImgData( index, col );
 		            }
 			}
 			
-			if ( orient === "coronal" ) {
+			if ( orient === 'coronal' ) {
 				for( var x = 0; x < dimX; ++x )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		            	var col = data.getUint8( getId(x,pos,(dimZ-1)-z) );
+		            	var col = data.getUint8( this.getId( x, pos,(dimZ-1)-z) );
 		            	var index = 4 * (z * imageData.width + x);
 		            	setImgData( index, col );
 		            }
 			}
 			
-			if ( orient === "sagittal" ) {
+			if ( orient === 'sagittal' ) {
 				for( var y = 0; y < dimY; ++y )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		            	var col = data.getUint8( getId(parseInt(pos),y,(dimZ-1)-z) );
+		            	var col = data.getUint8( this.getId(parseInt(pos),y,(dimZ-1)-z) );
 		            	var index = 4 * (z * imageData.width + y);
 		            	setImgData( index, col );
 		            }
@@ -278,11 +285,11 @@
 			}
 		} 
 		
-		function getId( x,y,z ) {
+		this.getId = function( x,y,z ) {
 			return 352 + x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]);
 		}
 		
-		function getIdFloat( x,y,z ) {
+		this.getIdFloat = function( x,y,z ) {
 			return 352 + ( x + (y * hdr.dim[1]) + (z * hdr.dim[1] * hdr.dim[2]) ) * 4;
 		}
 		
@@ -290,23 +297,23 @@
 		this.getValueId = function( id ) {
 			switch( hdr.datatype ) {
 				//UINT8
-				case 2:
-					return data.getUint8( id );
+			case 2:
+				return data.getUint8( id );
 				//FLOAT32
-				case 16:
-					if( hdr.dim[5] == 1 ) {
-						return data.getFloat32( id, true );	
-					}
-					if( hdr.dim[5] == 3 ) {
-						var out = [];
-						var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
-						out[0] = data.getFloat32( id, true );
-						out[1] = data.getFloat32( id + blocksize, true );
-						out[2] = data.getFloat32( id + blocksize*2, true );	
-						return out;
-					}
+			case 16:
+				if( hdr.dim[5] == 1 ) {
+					return data.getFloat32( id, true );	
+				}
+				if( hdr.dim[5] == 3 ) {
+					var out = [];
+					var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
+					out[0] = data.getFloat32( id, true );
+					out[1] = data.getFloat32( id + blocksize, true );
+					out[2] = data.getFloat32( id + blocksize*2, true );	
+					return out;
+				}
 				break;
-				default:
+			default:
 					console.log( "Nifti getValue(): datatype not defined" );
 			}
 		}
@@ -315,78 +322,76 @@
 			switch( hdr.datatype ) {
 			//UINT8
 			case 2:
-				return getValueId( getId( x,y,z ) );
+				return this.getValueId( this.getId( x,y,z ) );
 			//FLOAT32
 			case 16:
-				return getValueId( getIdFloat( x, y, z ) );	
-			default:
-				console.log( "Nifti getValue(): datatype not defined" );
+				return this.getValueId( this.getIdFloat( x, y, z ) );	
 			}
 		}
 		
 		this.setValue = function( x, y, z, value ) {
 			switch( hdr.datatype ) {
 			case 2:
-				data.setUint8( getId( x, y , z ), value );
+				data.setUint8( this.getId( x, y , z ), value );
 				break;
 			case 16:
 				if( hdr.dim[5] == 1 ) {
-					data.setFloat32( getIdFloat( x, y, z ), value, true );	
+					data.setFloat32( this.getIdFloat( x, y, z ), value, true );	
 				}
 				if( hdr.dim[5] == 3 ) {
 					var blocksize = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 4;
-					data.setFloat32( getIdFloat( x, y, z ), value[0], true );
-					data.setFloat32( getIdFloat( x, y, z ) + blocksize, value[1], true );
-					data.setFloat32( getIdFloat( x, y, z ) + blocksize*2, value[2], true );	
+					data.setFloat32( this.getIdFloat( x, y, z ), value[0], true );
+					data.setFloat32( this.getIdFloat( x, y, z ) + blocksize, value[1], true );
+					data.setFloat32( this.getIdFloat( x, y, z ) + blocksize*2, value[2], true );	
 				}
 				break;
 			default:
-				console.log( "Nifti setValue(): datatype not defined" );
+				console.log( 'Nifti setValue(): datatype not defined' );
 			}
 			
 		}
 				
-		function getImageRGBByte(orient, pos) {
-			var c2d = document.createElement("canvas");
-			( orient === "sagittal" ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
-			( orient === "axial" ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
-			var ctx = c2d.getContext("2d");
+		this.getImageRGBByte = function(orient, pos) {
+			var c2d = document.createElement('canvas');
+			( orient === 'sagittal' ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
+			( orient === 'axial' ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
+			var ctx = c2d.getContext('2d');
 			var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 			
 			var gOff = hdr.dim[1] * hdr.dim[2] * hdr.dim[3];
 			var bOff = 2 * gOff;
 			
-			if ( orient === "axial" ) {
+			if ( orient === 'axial' ) {
 				for( var x = 0; x < dimX; ++x )
 		            for( var y = 0; y < dimY; ++y )
 		            {
-		            	var r = data.getUint8( getId(x,y,pos) );
-		            	var g = data.getUint8(parseInt(getId(x,y,pos))+parseInt(gOff) );
-		            	var b = data.getUint8(parseInt(getId(x,y,pos))+parseInt(bOff) );
+		            	var r = data.getUint8( this.getId(x,y,pos) );
+		            	var g = data.getUint8(parseInt(this.getId(x,y,pos))+parseInt(gOff) );
+		            	var b = data.getUint8(parseInt(this.getId(x,y,pos))+parseInt(bOff) );
 		            	var index = 4 * (y * imageData.width + x);
 		            	setImgData( index, r, g, b );
 		            }
 			}
 			
-			if ( orient === "coronal" ) {
+			if ( orient === 'coronal' ) {
 				for( var x = 0; x < dimX; ++x )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		                var r = data.getUint8( getId(x,pos,z) );
-		            	var g = data.getUint8( getId(x,pos,z)+gOff );
-		            	var b = data.getUint8( getId(x,pos,z)+bOff );
+		                var r = data.getUint8( this.getId(x,pos,z) );
+		            	var g = data.getUint8( this.getId(x,pos,z)+gOff );
+		            	var b = data.getUint8( this.getId(x,pos,z)+bOff );
 		            	var index = 4 * (z * imageData.width + x);
 		            	setImgData( index, r, g, b );
 		            }
 			}
 			
-			if ( orient === "sagittal" ) {
+			if ( orient === 'sagittal' ) {
 				for( var y = 0; y < dimY; ++y )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		                var r = data.getUint8( getId(pos-1+1,y,z) );
-		            	var g = data.getUint8( getId(pos-1+1,y,z)+gOff );
-		            	var b = data.getUint8( getId(pos-1+1,y,z)+bOff );
+		                var r = data.getUint8( this.getId(pos,y,z) );
+		            	var g = data.getUint8( this.getId(pos,y,z)+gOff );
+		            	var b = data.getUint8( this.getId(pos,y,z)+bOff );
 		            	var index = 4 * (z * imageData.width + y);
 		            	setImgData( index, r, g, b );
 		            }
@@ -394,7 +399,7 @@
 			
 			return imageData;
 			
-			function setImgData( id, r, g, b ) {
+			setImgData = function( id, r, g, b ) {
 				imageData.data[id] = r;
                 imageData.data[id+1] = g;
                 imageData.data[id+2] = b;
@@ -402,39 +407,39 @@
 			}
 		}
 		
-		function getImageGrayFloat(orient, pos) {
-			var c2d = document.createElement("canvas");
+		this.getImageGrayFloat = function(orient, pos) {
+			var c2d = document.createElement('canvas');
 
-			( orient === "sagittal" ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
-			( orient === "axial" ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
-			var ctx = c2d.getContext("2d");
+			( orient === 'sagittal' ) ? c2d.width = hdr.dim[2] : c2d.width = hdr.dim[1]; 
+			( orient === 'axial' ) ? c2d.height = hdr.dim[2] : c2d.height = hdr.dim[3];
+			var ctx = c2d.getContext('2d');
 			var imageData = ctx.getImageData(0, 0, c2d.width, c2d.height);
 			
-			if ( orient === "axial" ) {
+			if ( orient === 'axial' ) {
 				for( var x = 0; x < dimX; ++x )
 		            for( var y = 0; y < dimY; ++y )
 		            {
-		            	var col = data.getFloat32( getIdFloat(x,y,pos) );
+		            	var col = data.getFloat32( this.getIdFloat(x,y,pos), true );
 		            	var index = 4 * (y * imageData.width + x);
 		            	setImgData( index, col );
 		            }
 			}
 			
-			if ( orient === "coronal" ) {
+			if ( orient === 'coronal' ) {
 				for( var x = 0; x < dimX; ++x )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		            	var col = data.getFloat32( getIdFloat(x,pos,z) );
+		            	var col = data.getFloat32( this.getIdFloat(x,pos,z), true );
 		            	var index = 4 * (z * imageData.width + x);
 		            	setImgData( index, col );
 		            }
 			}
 			
-			if ( orient === "sagittal" ) {
+			if ( orient === 'sagittal' ) {
 				for( var y = 0; y < dimY; ++y )
 		            for( var z = 0; z < dimZ; ++z )
 		            {
-		            	var col = data.getFloat32( getIdFloat(pos-1+1,y,z) );
+		            	var col = data.getFloat32( this.getIdFloat(pos,y,z), true );
 		            	var index = 4 * (z * imageData.width + y);
 		            	setImgData( index, col );
 		            }
@@ -443,9 +448,9 @@
 			return imageData;
 			
 			function setImgData( id, col ) {
-				imageData.data[id] = col*255;
-                imageData.data[id+1] = col*255;
-                imageData.data[id+2] = col*255;
+				imageData.data[id] = col / max *255;
+                imageData.data[id+1] = col / max *255;
+                imageData.data[id+2] = col / max *255;
                 imageData.data[id+3] = 255;
 			}
 		}
@@ -463,7 +468,7 @@
 		};
 		
 		this.getDims = function() {
-			return { "nx" : hdr.dim[1], "ny" : hdr.dim[2], "nz" : hdr.dim[3], "dx" : hdr.pixdim[1], "dy" : hdr.pixdim[2], "dz" : hdr.pixdim[3] }; 
+			return { 'nx' : hdr.dim[1], 'ny' : hdr.dim[2], 'nz' : hdr.dim[3], 'dx' : hdr.pixdim[1], 'dy' : hdr.pixdim[2], 'dz' : hdr.pixdim[3] }; 
 		};
 	};
 })();
